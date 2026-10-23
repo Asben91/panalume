@@ -165,9 +165,11 @@
           {@const b = busy(u) || started[u.id]}
           {@const p = pct(u)}
           <div class="row" class:busy={b}>
-            {#if u.pic}<img class="pic" src={haImage(u.pic)} alt="" loading="lazy" onerror={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+            <!-- Only pictures Home Assistant serves itself: Panalume doesn't load anything from the internet you haven't chosen (most update pictures are on brands.home-assistant.io). -->
+            {#if String(u.pic || '').startsWith('/')}<img class="pic" src={haImage(u.pic)} alt="" loading="lazy" onerror={(e) => (e.currentTarget.style.visibility = 'hidden')} />
             {:else}<span class="ico"><Icon icon="mdi:package-up" size="1.1em" /></span>{/if}
-            <button class="what" onclick={() => toggleOpen(u.id)}>
+            <div class="what">
+              <button class="tap" onclick={() => toggleOpen(u.id)}>
               <span class="ti">{uName(u)}</span>
               {#if b}
                 <span class="sub acc">Installing{p != null ? ` · ${Math.round(p)}%` : '…'}</span>
@@ -175,13 +177,15 @@
               {:else if show('versions') && (u.from || u.to)}
                 <span class="sub">{u.from || '?'} <Icon icon="mdi:arrow-right" size=".9em" /> <b>{u.to || '?'}</b></span>
               {/if}
+              </button>
+              <!-- Links and buttons can't sit inside another button, so these follow it. -->
               {#if open === u.id && !b}
                 <span class="more">
-                  {#if u.url}<a href={u.url} target="_blank" rel="noopener" onclick={(e) => e.stopPropagation()}><Icon icon="mdi:open-in-new" size="1em" />Release notes</a>{/if}
-                  <span class="lnk" role="button" tabindex="0" onclick={(e) => { e.stopPropagation(); skip(u); }} onkeydown={(e) => e.key === 'Enter' && skip(u)}><Icon icon="mdi:debug-step-over" size="1em" />Skip this version</span>
+                  {#if u.url}<a href={u.url} target="_blank" rel="noopener"><Icon icon="mdi:open-in-new" size="1em" />Release notes</a>{/if}
+                  <button class="lnk" onclick={() => skip(u)}><Icon icon="mdi:debug-step-over" size="1em" />Skip this version</button>
                 </span>
               {/if}
-            </button>
+            </div>
             {#if show('install') && canInstall(u) && !b && !small}
               <button class="act" class:armed={armed === u.id} onclick={() => install(u)}>{armed === u.id ? 'Confirm' : 'Install'}</button>
             {/if}
@@ -207,11 +211,12 @@
         {#each notifications as n (n.notification_id)}
           <div class="row note" class:open={open === n.notification_id}>
             <span class="ico"><Icon icon="mdi:bell-outline" size="1.1em" /></span>
-            <button class="what" onclick={() => toggleOpen(n.notification_id)}>
+            <!-- Not a <button>: the message can contain links. -->
+            <div class="what tap" role="button" tabindex="0" aria-expanded={open === n.notification_id} onclick={() => toggleOpen(n.notification_id)} onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggleOpen(n.notification_id))}>
               <span class="ti">{n.title || 'Notification'}</span>
               {#if n.message}<span class="body">{@html md(n.message)}</span>{/if}
               {#if n.created_at && !small}<span class="sub">{ago(n.created_at)}</span>{/if}
-            </button>
+            </div>
             <button class="x" onclick={() => dismiss(n)} aria-label="Dismiss" title="Dismiss"><Icon icon="mdi:close" size="1em" /></button>
           </div>
         {/each}
@@ -239,8 +244,8 @@
   .pic, .ico { width: 26px; height: 26px; flex: none; border-radius: 7px; display: grid; place-items: center; object-fit: contain; }
   .ico { background: rgba(255,255,255,.06); color: var(--accent); }
   .ico.sev { color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); }
-  .what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
-  span.what { cursor: default; }
+  .what, .tap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+  span.what, div.what:not(.tap) { cursor: default; }
   .ti { font-size: .9em; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ti.wrap, .open .ti { white-space: normal; }
   .sub { display: flex; align-items: center; gap: 4px; font-size: .75em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; text-decoration: none; }
@@ -251,6 +256,7 @@
   .body :global(a) { color: var(--accent); }
   .body :global(code) { font-size: .95em; background: rgba(255,255,255,.08); padding: 0 .25em; border-radius: 4px; }
   .more { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 3px; font-size: .75em; }
+  .more .lnk { background: none; border: 0; padding: 0; font: inherit; }
   .more a, .more .lnk { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); text-decoration: none; cursor: pointer; }
   .prog { height: 3px; border-radius: 2px; background: rgba(255,255,255,.1); overflow: hidden; margin-top: 2px; }
   .prog i { display: block; height: 100%; background: var(--accent); border-radius: 2px; transition: width .4s; }
